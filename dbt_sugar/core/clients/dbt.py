@@ -14,7 +14,9 @@ from dbt_sugar.core.exceptions import (
 from dbt_sugar.core.flags import FlagParser
 from dbt_sugar.core.logger import GLOBAL_LOGGER as logger
 
-DEFAULT_DBT_PROFILE_PATH = Path(os.getenv("DBT_PROFILES_DIR", default=Path.home().joinpath(".dbt")))
+DEFAULT_DBT_PROFILE_PATH = Path(
+    os.getenv("DBT_PROFILES_DIR", default=Path.home().joinpath(".dbt"))
+)
 
 
 class PostgresDbtProfilesModel(BaseModel):
@@ -57,7 +59,9 @@ class BaseYamlConfig:
         if full_path_to_file.is_file():
             return True
         else:
-            raise DbtProfileFileMissing(f"Could not locate `{filename}` in {dir.resolve()}")
+            raise DbtProfileFileMissing(
+                f"Could not locate `{filename}` in {dir.resolve()}"
+            )
 
 
 class DbtProject(BaseYamlConfig):
@@ -89,12 +93,14 @@ class DbtProject(BaseYamlConfig):
         return Path(self._project_dir).joinpath(type(self).DBT_PROJECT_FILENAME)
 
     def read_project(self) -> None:
-        _ = self._assert_file_exists(Path(self._project_dir), filename=self.DBT_PROJECT_FILENAME)
+        self._assert_file_exists(
+            Path(self._project_dir), filename=self.DBT_PROJECT_FILENAME
+        )
         _project_dict = open_yaml(self._dbt_project_filename)
 
-        # pass the dict through pydantic for validation and only getting what we need
+        # Pass the dict through pydantic for validation and only getting what we need
         # if the profile is invalid app will crash so no further tests required below.
-        logger.debug(f"the project {_project_dict}")
+        logger.debug("The project %s", _project_dict)
         _project = DbtProjectModel(**_project_dict)
         logger.debug(_project)
         self.project = _project
@@ -142,9 +148,15 @@ class DbtProfile(BaseYamlConfig):
             return self._profiles_dir
         return DEFAULT_DBT_PROFILE_PATH
 
-    def _get_target_profile(self, profile_dict: Dict[str, Any]) -> Dict[str, Union[str, int]]:
+    def _get_target_profile(
+        self, profile_dict: Dict[str, Any]
+    ) -> Dict[str, Union[str, int]]:
         if self._target_name:
-            return profile_dict["outputs"].get(self._target_name)
+            if self._target_name not in profile_dict["outputs"]:
+                logger.critical(
+                    "Target name not found in profile: %s" % self._target_name
+                )
+            return profile_dict["outputs"][self._target_name]
         self._target_name = profile_dict.get("target", str())
         if self._target_name:
             return profile_dict["outputs"].get(self._target_name)
@@ -159,7 +171,9 @@ class DbtProfile(BaseYamlConfig):
             self.profiles_dir
         )  # this will raise so no need to check exists further
         _profile_dict = open_yaml(self.profiles_dir / "profiles.yml")
-        _profile_dict = _profile_dict.get(self._profile_name, _profile_dict.get(self._profile_name))
+        _profile_dict = _profile_dict.get(
+            self._profile_name, _profile_dict.get(self._profile_name)
+        )
         if _profile_dict:
 
             # read target name from args or try to get it from the dbt_profile `target:` field.
@@ -183,7 +197,9 @@ class DbtProfile(BaseYamlConfig):
                         "profiles.yml. Check that this field is not missing."
                     )
                 else:
-                    raise NotImplementedError(f"{_profile_type} is not implemented yet.")
+                    raise NotImplementedError(
+                        f"{_profile_type} is not implemented yet."
+                    )
                 logger.debug(_target_profile)
                 self.profile = _target_profile.dict()
 
@@ -207,4 +223,6 @@ class DbtProfile(BaseYamlConfig):
             if cli_arg_value and isinstance(self.profile, dict):
                 self.profile[flag_override_dict["maps_to"]] = cli_arg_value
             else:
-                logger.debug("No schema passed to CLI will try to read from profile.yml")
+                logger.debug(
+                    "No schema passed to CLI will try to read from profile.yml"
+                )
